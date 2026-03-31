@@ -1,0 +1,1350 @@
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>VasukHub — Социальная лента</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        body {
+            background: radial-gradient(circle at 10% 30%, #ffdde1, #ee9ca7);
+            min-height: 100vh;
+            padding: 1.5rem;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+        }
+        .gallery-section {
+            flex: 3;
+            min-width: 260px;
+        }
+        .chat-section {
+            flex: 1.2;
+            min-width: 280px;
+            background: rgba(255,250,245,0.85);
+            backdrop-filter: blur(12px);
+            border-radius: 48px;
+            padding: 1.2rem;
+            height: calc(100vh - 3rem);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.2);
+        }
+        .hero {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .hero h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #FF6A88, #FEB47B);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .upload-panel {
+            background: rgba(255,250,245,0.7);
+            backdrop-filter: blur(8px);
+            border-radius: 40px;
+            padding: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        .btn {
+            border: none;
+            padding: 10px 24px;
+            font-weight: 600;
+            border-radius: 60px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: 0.2s;
+        }
+        .btn-primary {
+            background: linear-gradient(95deg, #FF8066, #F94C6A);
+            color: white;
+        }
+        .btn-danger {
+            background: #2c2e3a;
+            color: #f9e0c7;
+        }
+        .btn-small {
+            padding: 6px 14px;
+            font-size: 0.8rem;
+        }
+        .drop-zone {
+            background: rgba(255,248,235,0.6);
+            border: 2px dashed #ff9f7c;
+            border-radius: 40px;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        .counter-badge {
+            background: #2b1e2a;
+            color: #ffd966;
+            padding: 4px 14px;
+            border-radius: 40px;
+            font-weight: bold;
+        }
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            max-height: calc(100vh - 320px);
+            overflow-y: auto;
+            padding-right: 6px;
+        }
+        .post {
+            background: rgba(255,250,245,0.95);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+            transition: 0.2s;
+            position: relative;
+            cursor: pointer;
+        }
+        .post:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        }
+        .post-media {
+            position: relative;
+            background: #000;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .post-media img, .post-media video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.2s;
+            pointer-events: none;
+        }
+        .post:hover .post-media img,
+        .post:hover .post-media video {
+            transform: scale(1.02);
+        }
+        .video-duration {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            backdrop-filter: blur(4px);
+            pointer-events: none;
+            z-index: 2;
+        }
+        .delete-post-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.6);
+            border: none;
+            color: #ff6b6b;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+            transition: 0.2s;
+            z-index: 3;
+        }
+        .delete-post-btn:hover {
+            background: rgba(0,0,0,0.9);
+            transform: scale(1.05);
+        }
+        .post-stats {
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fffcf7;
+            border-top: 1px solid #ffe0cc;
+        }
+        .like-comment-count {
+            display: flex;
+            gap: 16px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #7e5a4a;
+        }
+        .like-comment-count span {
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .like-comment-count span:hover {
+            color: #ff6b6b;
+        }
+        .like-comment-count i {
+            margin-right: 4px;
+            color: #ff8a6f;
+        }
+        .lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 4000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0.2s, opacity 0.2s;
+        }
+        .lightbox.active {
+            visibility: visible;
+            opacity: 1;
+        }
+        .lightbox-container {
+            display: flex;
+            width: 90vw;
+            height: 85vh;
+            background: #1a1a1a;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        .lightbox-media-area {
+            flex: 3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            position: relative;
+        }
+        .lightbox-media {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .lightbox-comments-area {
+            flex: 1;
+            background: rgba(255,250,245,0.95);
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            min-width: 300px;
+        }
+        .lightbox-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ffcfb0;
+            margin-bottom: 10px;
+        }
+        .lightbox-header h4 {
+            font-size: 1rem;
+            color: #b34e3a;
+        }
+        .lightbox-like-btn {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 5px 12px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+        }
+        .lightbox-like-btn i {
+            font-size: 1.2rem;
+        }
+        .lightbox-like-btn.liked {
+            color: #ff3b3b;
+        }
+        .lightbox-like-btn:not(.liked) {
+            color: #7e5a4a;
+        }
+        .lightbox-comments-list {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+        .lightbox-comment-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #ffe0cc;
+        }
+        .lightbox-comment-item strong {
+            color: #b34e3a;
+        }
+        .lightbox-comment-item small {
+            font-size: 0.7rem;
+            color: #886b5e;
+            margin-left: 8px;
+        }
+        .lightbox-comment-input-area {
+            display: flex;
+            gap: 8px;
+            border-top: 1px solid #ffcfb0;
+            padding-top: 10px;
+        }
+        .lightbox-comment-input {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 20px;
+            border: 1px solid #ffb48a;
+            outline: none;
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            z-index: 10;
+            background: rgba(0,0,0,0.6);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        .lightbox-close:hover {
+            background: rgba(0,0,0,0.9);
+            transform: scale(1.05);
+        }
+        .lightbox-prev, .lightbox-next {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            font-size: 30px;
+            cursor: pointer;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+            z-index: 10;
+        }
+        .lightbox-prev { left: 20px; }
+        .lightbox-next { right: 20px; }
+        .lightbox-prev:hover, .lightbox-next:hover { background: rgba(0,0,0,0.8); }
+        .lightbox-counter {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 10;
+        }
+        .chat-header {
+            padding-bottom: 12px;
+            border-bottom: 1px solid #ffcfb0;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-right: 5px;
+        }
+        .message {
+            background: rgba(255,245,235,0.9);
+            border-radius: 20px;
+            padding: 8px 12px;
+            word-break: break-word;
+        }
+        .message strong { color: #b34e3a; }
+        .message small { font-size: 0.7rem; color: #886b5e; margin-left: 8px; }
+        .chat-input-area {
+            display: flex;
+            gap: 8px;
+            border-top: 1px solid #ffcfb0;
+            padding-top: 12px;
+        }
+        #chatInput {
+            flex: 1;
+            padding: 10px 14px;
+            border: none;
+            border-radius: 60px;
+            background: rgba(255,245,235,0.9);
+            outline: none;
+        }
+        #sendBtn {
+            background: #ff8a6f;
+            border: none;
+            border-radius: 60px;
+            padding: 0 20px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 80vh;
+        }
+        .auth-card {
+            background: rgba(255,250,245,0.9);
+            backdrop-filter: blur(12px);
+            border-radius: 48px;
+            padding: 2rem;
+            width: 340px;
+            text-align: center;
+        }
+        .auth-card input {
+            width: 100%;
+            padding: 12px;
+            margin: 12px 0;
+            border-radius: 60px;
+            border: 1px solid #ffb48a;
+            outline: none;
+        }
+        .auth-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .auth-buttons .btn {
+            flex: 1;
+            justify-content: center;
+        }
+        .profile-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255,250,245,0.7);
+            padding: 8px 16px;
+            border-radius: 60px;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .avatar-placeholder {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e0c3b0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        .toast-notify {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2d2a2e;
+            color: #ffefcf;
+            padding: 8px 20px;
+            border-radius: 40px;
+            z-index: 6000;
+            animation: fadeInUp 0.3s ease;
+        }
+        .empty-message {
+            text-align: center;
+            padding: 40px;
+            color: #7e5a4a;
+        }
+        .key-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            backdrop-filter: blur(8px);
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .key-card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 40px;
+            padding: 40px;
+            width: 380px;
+            text-align: center;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+            animation: slideUp 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .key-icon {
+            font-size: 70px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 20px;
+        }
+        .key-card h2 {
+            font-size: 28px;
+            color: #2d3748;
+            margin-bottom: 8px;
+        }
+        .key-card p {
+            color: #718096;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .key-input-group {
+            position: relative;
+            margin-bottom: 25px;
+        }
+        .key-input-group i {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #a0aec0;
+            font-size: 18px;
+        }
+        .key-input {
+            width: 100%;
+            padding: 14px 16px 14px 52px;
+            font-size: 20px;
+            letter-spacing: 6px;
+            border: 2px solid #e2e8f0;
+            border-radius: 60px;
+            outline: none;
+            transition: all 0.3s;
+            text-align: center;
+            font-weight: 600;
+            background: white;
+        }
+        .key-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+        }
+        .key-submit {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 60px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .key-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(102, 126, 234, 0.4);
+        }
+        .key-error {
+            color: #e53e3e;
+            font-size: 13px;
+            margin-top: 12px;
+            min-height: 32px;
+        }
+        @media (max-width: 800px) {
+            body { padding: 1rem; }
+            .container { flex-direction: column; }
+            .chat-section { height: 400px; }
+            .gallery { max-height: 400px; }
+            .lightbox-container { flex-direction: column; width: 95vw; height: 90vh; }
+            .lightbox-media-area { flex: 2; min-height: 200px; }
+            .lightbox-comments-area { flex: 1; min-width: auto; }
+            .lightbox-prev, .lightbox-next { width: 35px; height: 35px; font-size: 20px; }
+            .key-card { width: 90%; padding: 30px 20px; }
+        }
+    </style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+    // ==================== НАСТРОЙКИ SUPABASE ====================
+    const SUPABASE_URL = 'https://pucttpqqrjjnpxzwbwei.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_58NvUqUTTkDqCQ2hQUzyuw_IL1kWCw8';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // ============================================================
+
+    // ==================== Глобальные переменные ====================
+    let currentUser = null;
+    let mediaList = [];
+    let currentLightboxIndex = 0;
+    let chatSubscription = null;
+
+    // ==================== Вспомогательные функции ====================
+    function showToast(msg, duration = 2000) {
+        let t = document.querySelector('.toast-notify');
+        if (t) t.remove();
+        const toast = document.createElement('div');
+        toast.className = 'toast-notify';
+        toast.innerText = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), duration);
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+    }
+
+    function formatDuration(sec) {
+        if (isNaN(sec)) return '0:00';
+        const m = Math.floor(sec / 60);
+        const s = Math.floor(sec % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function getVideoDuration(url, callback) {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.onloadedmetadata = () => { callback(video.duration); video.remove(); };
+        video.onerror = () => { callback(null); video.remove(); };
+        video.src = url;
+    }
+
+    // ==================== API вызовы ====================
+    async function apiFetch(endpoint, options = {}) {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...options.headers
+        };
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        const res = await fetch(endpoint, { ...options, headers });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error || 'Ошибка запроса');
+        }
+        return data;
+    }
+
+    async function registerUser(username, password) {
+        const data = await apiFetch('/api/auth/register', {
+            method: 'POST',
+            body: JSON.stringify({ username, password })
+        });
+        if (data.success) {
+            localStorage.setItem('token', data.token);
+            currentUser = data.user;
+            showToast('Регистрация успешна!');
+            renderMainApp();
+        } else {
+            throw new Error(data.error);
+        }
+    }
+
+    async function loginUser(username, password) {
+        const data = await apiFetch('/api/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ username, password })
+        });
+        if (data.success) {
+            localStorage.setItem('token', data.token);
+            currentUser = data.user;
+            showToast('Добро пожаловать!');
+            renderMainApp();
+        } else {
+            throw new Error(data.error);
+        }
+    }
+
+    async function checkAuth() {
+        const token = localStorage.getItem('token');
+        if (!token) return false;
+        try {
+            const data = await apiFetch('/api/auth/me');
+            currentUser = data;
+            return true;
+        } catch (err) {
+            localStorage.removeItem('token');
+            return false;
+        }
+    }
+
+    async function logout() {
+        localStorage.removeItem('token');
+        currentUser = null;
+        if (chatSubscription) chatSubscription.unsubscribe();
+        renderAuthForm();
+    }
+
+    async function fetchGallery() {
+        const data = await apiFetch('/api/media');
+        mediaList = data;
+        renderGallery();
+        const counter = document.getElementById('mediaCounter');
+        if (counter) counter.innerText = `📦 Медиа: ${mediaList.length}`;
+    }
+
+    async function uploadFiles(files) {
+        const formData = new FormData();
+        let added = 0;
+        for (let f of files) {
+            if (f.type.startsWith('image/') || f.type.startsWith('video/')) {
+                formData.append('files', f);
+                added++;
+            }
+        }
+        if (added === 0) { showToast('Нет подходящих файлов'); return; }
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`✅ Загружено ${data.uploaded.length} файлов`);
+            await fetchGallery();
+        } else {
+            showToast('Ошибка загрузки');
+        }
+    }
+
+    async function toggleLike(mediaId, likeSpan, countSpan) {
+        const token = localStorage.getItem('token');
+        if (!token) { showToast('Войдите, чтобы ставить лайки'); return; }
+        const res = await fetch('/api/likes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ mediaId })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            const icon = likeSpan.querySelector('i');
+            if (data.liked) {
+                icon.className = 'fas fa-heart';
+            } else {
+                icon.className = 'far fa-heart';
+            }
+            countSpan.innerText = data.count;
+        }
+    }
+
+    async function getLikeStatus(mediaId) {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`/api/likes?mediaId=${mediaId}`, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        const data = await res.json();
+        return data;
+    }
+
+    async function addComment(mediaId, text) {
+        const token = localStorage.getItem('token');
+        if (!token) { showToast('Войдите, чтобы комментировать'); return false; }
+        const res = await fetch('/api/comments', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ mediaId, text })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            return data;
+        } else {
+            showToast('Ошибка добавления комментария');
+            return false;
+        }
+    }
+
+    async function getComments(mediaId) {
+        const res = await fetch(`/api/comments?mediaId=${mediaId}`);
+        const data = await res.json();
+        return data;
+    }
+
+    async function uploadAvatar(file) {
+        const formData = new FormData();
+        formData.append('avatar', file);
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/avatar', {
+            method: 'POST',
+            body: formData,
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok) {
+            currentUser.avatar_url = data.avatar_url;
+            updateAvatarDisplay();
+            showToast('Аватар обновлён');
+        } else {
+            showToast('Ошибка загрузки аватара');
+        }
+    }
+
+    // ==================== Рендер галереи ====================
+    function renderGallery() {
+        const galleryEl = document.getElementById('gallery');
+        if (!galleryEl) return;
+        galleryEl.innerHTML = '';
+        if (mediaList.length === 0) {
+            galleryEl.innerHTML = '<div class="empty-message">🎈 Галерея пуста. Добавьте фото или видео!</div>';
+            return;
+        }
+        mediaList.forEach((item, idx) => {
+            const post = createPostElement(item, idx);
+            galleryEl.appendChild(post);
+            if (item.type.startsWith('video/')) {
+                const durationSpan = post.querySelector('.video-duration');
+                getVideoDuration(item.url, (dur) => {
+                    if (durationSpan) durationSpan.innerText = formatDuration(dur);
+                });
+            }
+        });
+    }
+
+    async function createPostElement(item, idx) {
+        const div = document.createElement('div');
+        div.className = 'post';
+        div.dataset.id = item.id;
+
+        const mediaDiv = document.createElement('div');
+        mediaDiv.className = 'post-media';
+        if (item.type.startsWith('image/')) {
+            const img = document.createElement('img');
+            img.src = item.url;
+            img.alt = item.original_name;
+            mediaDiv.appendChild(img);
+        } else {
+            const video = document.createElement('video');
+            video.src = item.url;
+            video.preload = 'metadata';
+            mediaDiv.appendChild(video);
+            const durSpan = document.createElement('div');
+            durSpan.className = 'video-duration';
+            durSpan.innerText = '0:00';
+            mediaDiv.appendChild(durSpan);
+        }
+
+        const delBtn = document.createElement('button');
+        delBtn.innerHTML = '❌';
+        delBtn.className = 'delete-post-btn';
+        delBtn.onclick = async (e) => {
+            e.stopPropagation();
+            const pin = prompt('Введите пин-код администратора (6666):');
+            if (pin !== '6666') { if (pin) showToast('Неверный пин-код'); return; }
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/api/media/${item.id}`, {
+                method: 'DELETE',
+                headers: { 'X-Pin': pin, 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                showToast('Удалено');
+                await fetchGallery();
+            } else {
+                showToast('Ошибка удаления');
+            }
+        };
+        mediaDiv.appendChild(delBtn);
+        mediaDiv.onclick = () => openLightbox(idx);
+        div.appendChild(mediaDiv);
+
+        const likeStatus = await getLikeStatus(item.id);
+        const comments = await getComments(item.id);
+        const statsDiv = document.createElement('div');
+        statsDiv.className = 'post-stats';
+        const countsDiv = document.createElement('div');
+        countsDiv.className = 'like-comment-count';
+
+        const likeSpan = document.createElement('span');
+        const liked = likeStatus.liked || false;
+        likeSpan.innerHTML = `<i class="${liked ? 'fas' : 'far'} fa-heart"></i> <span class="like-count">${likeStatus.count || 0}</span>`;
+        const countSpan = likeSpan.querySelector('.like-count');
+        likeSpan.onclick = async (e) => {
+            e.stopPropagation();
+            await toggleLike(item.id, likeSpan, countSpan);
+        };
+        const commentSpan = document.createElement('span');
+        commentSpan.innerHTML = `<i class="far fa-comment"></i> ${comments.length}`;
+        commentSpan.onclick = (e) => { e.stopPropagation(); openLightbox(idx); };
+        countsDiv.appendChild(likeSpan);
+        countsDiv.appendChild(commentSpan);
+        statsDiv.appendChild(countsDiv);
+        div.appendChild(statsDiv);
+        return div;
+    }
+
+    // ==================== Лайтбокс ====================
+    const lightbox = document.createElement('div');
+    lightbox.className = 'lightbox';
+    lightbox.id = 'lightbox';
+    document.body.appendChild(lightbox);
+
+    async function openLightbox(index) {
+        if (!mediaList.length) return;
+        currentLightboxIndex = (index + mediaList.length) % mediaList.length;
+        await renderLightbox();
+        lightbox.classList.add('active');
+    }
+
+    function closeLightbox() {
+        lightbox.classList.remove('active');
+        const video = lightbox.querySelector('video');
+        if (video) video.pause();
+    }
+
+    async function renderLightbox() {
+        const item = mediaList[currentLightboxIndex];
+        if (!item) return;
+        const likeStatus = await getLikeStatus(item.id);
+        const comments = await getComments(item.id);
+        lightbox.innerHTML = `
+            <div class="lightbox-container">
+                <span class="lightbox-close">&times;</span>
+                <button class="lightbox-prev">❮</button>
+                <button class="lightbox-next">❯</button>
+                <div class="lightbox-media-area" id="lightbox-media-area">
+                    ${item.type.startsWith('image/') ? 
+                        `<img class="lightbox-media" src="${item.url}" alt="">` : 
+                        `<video class="lightbox-media" src="${item.url}" controls autoplay></video>`
+                    }
+                </div>
+                <div class="lightbox-comments-area">
+                    <div class="lightbox-header">
+                        <h4><i class="far fa-comment"></i> Комментарии (${comments.length})</h4>
+                        <button class="lightbox-like-btn ${likeStatus.liked ? 'liked' : ''}" id="lightbox-like-btn">
+                            <i class="${likeStatus.liked ? 'fas' : 'far'} fa-heart"></i> <span id="lightbox-like-count">${likeStatus.count || 0}</span>
+                        </button>
+                    </div>
+                    <div class="lightbox-comments-list" id="lightbox-comments-list"></div>
+                    <div class="lightbox-comment-input-area">
+                        <input type="text" class="lightbox-comment-input" id="lightbox-comment-input" placeholder="Написать комментарий...">
+                        <button class="btn btn-small" id="lightbox-send-comment">💬 Отправить</button>
+                    </div>
+                </div>
+                <div class="lightbox-counter">${currentLightboxIndex+1} / ${mediaList.length}</div>
+            </div>
+        `;
+        const commentsList = document.getElementById('lightbox-comments-list');
+        commentsList.innerHTML = comments.map(c => `
+            <div class="lightbox-comment-item">
+                <strong>${escapeHtml(c.user)}</strong>
+                <small>${new Date(c.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</small><br>
+                ${escapeHtml(c.text)}
+            </div>
+        `).join('');
+        if (!comments.length) commentsList.innerHTML = '<div style="color:#886b5e; text-align:center; padding:20px;">💬 Нет комментариев. Будьте первым!</div>';
+
+        const closeBtn = lightbox.querySelector('.lightbox-close');
+        const prevBtn = lightbox.querySelector('.lightbox-prev');
+        const nextBtn = lightbox.querySelector('.lightbox-next');
+        const likeBtn = lightbox.querySelector('#lightbox-like-btn');
+        const sendBtn = lightbox.querySelector('#lightbox-send-comment');
+        const commentInput = lightbox.querySelector('#lightbox-comment-input');
+        const likeCountSpan = lightbox.querySelector('#lightbox-like-count');
+
+        closeBtn.onclick = closeLightbox;
+        prevBtn.onclick = async () => {
+            currentLightboxIndex = (currentLightboxIndex - 1 + mediaList.length) % mediaList.length;
+            await renderLightbox();
+        };
+        nextBtn.onclick = async () => {
+            currentLightboxIndex = (currentLightboxIndex + 1) % mediaList.length;
+            await renderLightbox();
+        };
+        likeBtn.onclick = async () => {
+            const liked = likeBtn.classList.contains('liked');
+            const newLiked = !liked;
+            const newCount = parseInt(likeCountSpan.innerText) + (newLiked ? 1 : -1);
+            await toggleLike(item.id, likeBtn, likeCountSpan);
+            if (newLiked) likeBtn.classList.add('liked');
+            else likeBtn.classList.remove('liked');
+            likeCountSpan.innerText = newCount;
+        };
+        sendBtn.onclick = async () => {
+            const text = commentInput.value.trim();
+            if (!text) return;
+            const result = await addComment(item.id, text);
+            if (result) {
+                commentInput.value = '';
+                await renderLightbox();
+            }
+        };
+        commentInput.onkeypress = async (e) => {
+            if (e.key === 'Enter') {
+                const text = commentInput.value.trim();
+                if (!text) return;
+                const result = await addComment(item.id, text);
+                if (result) {
+                    commentInput.value = '';
+                    await renderLightbox();
+                }
+            }
+        };
+        lightbox.onclick = (e) => { if (e.target === lightbox) closeLightbox(); };
+        const keyHandler = (e) => {
+            if (!lightbox.classList.contains('active')) return;
+            if (e.key === 'ArrowLeft') prevBtn.click();
+            if (e.key === 'ArrowRight') nextBtn.click();
+            if (e.key === 'Escape') closeLightbox();
+        };
+        document.removeEventListener('keydown', keyHandler);
+        document.addEventListener('keydown', keyHandler);
+    }
+
+    // ==================== Чат ====================
+    function initChat() {
+        if (chatSubscription) chatSubscription.unsubscribe();
+        chatSubscription = supabaseClient
+            .channel('chat')
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'messages'
+            }, (payload) => {
+                const msg = payload.new;
+                addMessageToChat(msg.nickname, msg.text, msg.created_at);
+            })
+            .subscribe();
+
+        loadChatHistory();
+    }
+
+    async function loadChatHistory() {
+        const { data, error } = await supabaseClient
+            .from('messages')
+            .select('*')
+            .order('created_at', { ascending: true });
+        if (error) return;
+        const chatDiv = document.getElementById('chatMessages');
+        if (!chatDiv) return;
+        chatDiv.innerHTML = '';
+        data.forEach(msg => addMessageToChat(msg.nickname, msg.text, msg.created_at));
+    }
+
+    async function sendMessage(text) {
+        if (!currentUser) { showToast('Войдите, чтобы писать в чат'); return; }
+        const { error } = await supabaseClient
+            .from('messages')
+            .insert({
+                user_id: currentUser.id,
+                nickname: currentUser.username,
+                text: text
+            });
+        if (error) console.error(error);
+    }
+
+    function addMessageToChat(nick, text, timestamp) {
+        const chatDiv = document.getElementById('chatMessages');
+        if (!chatDiv) return;
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message';
+        const timeStr = timestamp ? new Date(timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+        msgDiv.innerHTML = `<strong>${escapeHtml(nick)}</strong> <small>${timeStr}</small><br>${escapeHtml(text)}`;
+        chatDiv.appendChild(msgDiv);
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+
+    // ==================== UI рендеринг ====================
+    function updateAvatarDisplay() {
+        const container = document.getElementById('avatarContainer');
+        if (!container) return;
+        if (currentUser?.avatar_url) {
+            container.innerHTML = `<img class="avatar" src="${currentUser.avatar_url}" alt="avatar">`;
+        } else {
+            container.innerHTML = `<div class="avatar-placeholder">👤</div>`;
+        }
+    }
+
+    function renderMainApp() {
+        const app = document.getElementById('app');
+        app.innerHTML = `
+            <div class="container">
+                <div class="gallery-section">
+                    <div class="hero"><h1>🎬 VasukHub 📸</h1><p>Сетка публикаций — загружай, лайкай, комментируй!</p></div>
+                    <div class="profile-bar">
+                        <div id="avatarContainer"></div>
+                        <span><strong>${escapeHtml(currentUser.username)}</strong></span>
+                        <button class="btn" id="changeAvatarBtn" style="padding:4px 12px;">📷 Аватар</button>
+                        <button class="btn" id="logoutBtn" style="padding:4px 12px;">🚪 Выйти</button>
+                    </div>
+                    <div class="upload-panel">
+                        <div class="button-group">
+                            <button class="btn btn-primary" id="uploadBtn">📁 + Добавить файлы</button>
+                            <button class="btn btn-danger" id="clearAllBtn">🧹 Очистить всё</button>
+                        </div>
+                        <div class="drop-zone" id="dropZone">📀 Перетащи файлы сюда</div>
+                        <input type="file" id="fileInput" multiple accept="image/*,video/*" style="display: none;">
+                    </div>
+                    <div class="stats">
+                        <div class="counter-badge" id="mediaCounter">📦 Медиа: 0</div>
+                        <div class="clear-info">❌ Удаление доступно администратору</div>
+                    </div>
+                    <div class="gallery" id="gallery"><div class="empty-message">Загрузка...</div></div>
+                </div>
+                <div class="chat-section">
+                    <div class="chat-header">
+                        <h3>💬 Чат</h3>
+                        <button id="clearChatBtn" class="btn btn-small">🧹 Очистить</button>
+                    </div>
+                    <div class="chat-messages" id="chatMessages"></div>
+                    <div class="chat-input-area">
+                        <input type="text" id="chatInput" placeholder="Сообщение...">
+                        <button id="sendBtn">➤</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        updateAvatarDisplay();
+        document.getElementById('uploadBtn').onclick = () => document.getElementById('fileInput').click();
+        document.getElementById('fileInput').onchange = (e) => {
+            if (e.target.files.length) uploadFiles(e.target.files);
+            e.target.value = '';
+        };
+        document.getElementById('clearAllBtn').onclick = async () => {
+            const pin = prompt('Введите пин-код администратора (6666):');
+            if (pin !== '6666') { if (pin) showToast('Неверный пин-код'); return; }
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/media', {
+                method: 'DELETE',
+                headers: { 'X-Pin': pin, 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                showToast('Всё очищено');
+                await fetchGallery();
+            } else {
+                showToast('Ошибка');
+            }
+        };
+        document.getElementById('logoutBtn').onclick = logout;
+        document.getElementById('changeAvatarBtn').onclick = () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                await uploadAvatar(file);
+            };
+            input.click();
+        };
+        document.getElementById('clearChatBtn').onclick = async () => {
+            const pin = prompt('Введите пин-код администратора (6666):');
+            if (pin !== '6666') { if (pin) showToast('Неверный пин-код'); return; }
+            const { error } = await supabaseClient.from('messages').delete().neq('id', 0);
+            if (!error) {
+                showToast('Чат очищен');
+                await loadChatHistory();
+            } else {
+                showToast('Ошибка очистки чата');
+            }
+        };
+        setupDragDrop();
+        fetchGallery();
+        initChat();
+        setInterval(fetchGallery, 30000);
+    }
+
+    function setupDragDrop() {
+        const dz = document.getElementById('dropZone');
+        if (!dz) return;
+        ['dragenter','dragover','dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => e.preventDefault()));
+        dz.addEventListener('dragenter', () => dz.classList.add('drag-over'));
+        dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+        dz.addEventListener('drop', (e) => {
+            dz.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length) uploadFiles(Array.from(files));
+        });
+        dz.addEventListener('click', () => document.getElementById('fileInput').click());
+    }
+
+    // ==================== Авторизация ====================
+    function renderAuthForm() {
+        const app = document.getElementById('app');
+        app.innerHTML = `
+            <div class="auth-container">
+                <div class="auth-card">
+                    <h2>🎬 VasukHub</h2>
+                    <div id="authForm">
+                        <input type="text" id="authUsername" placeholder="Имя пользователя">
+                        <input type="password" id="authPassword" placeholder="Пароль">
+                        <div id="confirmPasswordGroup" style="display:none;">
+                            <input type="password" id="confirmPassword" placeholder="Подтвердите пароль">
+                        </div>
+                        <div class="auth-buttons">
+                            <button class="btn btn-primary" id="authLoginBtn">Войти</button>
+                            <button class="btn" id="authRegisterBtn">Зарегистрироваться</button>
+                        </div>
+                        <div id="authError" style="color:red; margin-top:10px;"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        let isLoginMode = true;
+        const loginBtn = document.getElementById('authLoginBtn');
+        const registerBtn = document.getElementById('authRegisterBtn');
+        const confirmGroup = document.getElementById('confirmPasswordGroup');
+        const authUsername = document.getElementById('authUsername');
+        const authPassword = document.getElementById('authPassword');
+        const errorDiv = document.getElementById('authError');
+
+        const updateButtons = () => {
+            if (isLoginMode) {
+                loginBtn.style.background = 'linear-gradient(95deg, #FF8066, #F94C6A)';
+                registerBtn.style.background = 'white';
+                confirmGroup.style.display = 'none';
+            } else {
+                loginBtn.style.background = 'white';
+                registerBtn.style.background = 'linear-gradient(95deg, #FF8066, #F94C6A)';
+                confirmGroup.style.display = 'block';
+            }
+        };
+        registerBtn.onclick = () => {
+            if (isLoginMode) {
+                isLoginMode = false;
+                updateButtons();
+            } else {
+                const username = authUsername.value.trim();
+                const password = authPassword.value;
+                const confirm = document.getElementById('confirmPassword').value;
+                if (!username || !password) { errorDiv.innerText = 'Заполните поля'; return; }
+                if (password !== confirm) { errorDiv.innerText = 'Пароли не совпадают'; return; }
+                registerUser(username, password).catch(err => errorDiv.innerText = err.message);
+            }
+        };
+        loginBtn.onclick = () => {
+            if (!isLoginMode) {
+                isLoginMode = true;
+                updateButtons();
+            } else {
+                const username = authUsername.value.trim();
+                const password = authPassword.value;
+                if (!username || !password) { errorDiv.innerText = 'Заполните поля'; return; }
+                loginUser(username, password).catch(err => errorDiv.innerText = err.message);
+            }
+        };
+        updateButtons();
+    }
+
+    // ==================== Страница ввода ключа ====================
+    function showKeyPage() {
+        const savedKey = sessionStorage.getItem('vasukhub_key');
+        if (savedKey === '6666') {
+            startApp();
+            return;
+        }
+        const overlay = document.createElement('div');
+        overlay.className = 'key-overlay';
+        overlay.innerHTML = `
+            <div class="key-card">
+                <div class="key-icon"><i class="fas fa-shield-alt"></i></div>
+                <h2>Доступ ограничен</h2>
+                <p>Введите секретный ключ для входа</p>
+                <div class="key-input-group">
+                    <i class="fas fa-key"></i>
+                    <input type="password" class="key-input" id="secretKeyInput" placeholder="****" maxlength="4" autofocus>
+                </div>
+                <button class="key-submit" id="submitKeyBtn"><i class="fas fa-arrow-right"></i> Войти</button>
+                <div class="key-error" id="keyError"></div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        const input = overlay.querySelector('#secretKeyInput');
+        const btn = overlay.querySelector('#submitKeyBtn');
+        const errorDiv = overlay.querySelector('#keyError');
+        const handle = () => {
+            if (input.value.trim() === '6666') {
+                sessionStorage.setItem('vasukhub_key', '6666');
+                overlay.remove();
+                startApp();
+            } else {
+                errorDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> Неверный ключ доступа!';
+                input.value = '';
+                input.focus();
+                input.style.borderColor = '#e53e3e';
+                setTimeout(() => input.style.borderColor = '#e2e8f0', 1000);
+            }
+        };
+        btn.onclick = handle;
+        input.onkeypress = (e) => { if (e.key === 'Enter') handle(); };
+        input.focus();
+    }
+
+    async function startApp() {
+        const authorized = await checkAuth();
+        if (authorized) {
+            renderMainApp();
+        } else {
+            renderAuthForm();
+        }
+    }
+
+    showKeyPage();
+</script>
+</body>
+</html>
+```
